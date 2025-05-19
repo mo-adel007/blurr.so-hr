@@ -1,35 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { employeeSchema } from "@/lib/validators";
-import { z } from "zod";
-import { EmployeeForm } from "./components/employee-form";
-import { EmployeeTable } from "./components/employee-table";
+import { ProjectForm } from "./components/project-form";
+import { ProjectTable } from "./components/project-table";
 
-export default function EmployeesPage() {
-  const [employees, setEmployees] = useState([]);
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTableLoading, setIsTableLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchEmployees = async () => {
+  const fetchProjects = async () => {
     try {
-      const response = await fetch("/api/employees");
+      const response = await fetch("/api/projects");
       if (!response.ok) {
-        throw new Error("Failed to fetch employees");
+        throw new Error("Failed to fetch projects");
       }
       const data = await response.json();
-      setEmployees(data);
+      setProjects(data);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch employees",
+        description: "Failed to fetch projects",
         variant: "destructive",
       });
     } finally {
@@ -37,15 +35,11 @@ export default function EmployeesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const handleSubmit = async (data: z.infer<typeof employeeSchema>) => {
+  const handleSubmit = async (data: any) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/employees", {
+      const response = await fetch("/api/projects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,20 +49,20 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add employee");
+        throw new Error(errorData.message || "Failed to add project");
       }
 
-      await fetchEmployees(); // Refresh the employee list
+      await fetchProjects();
       setIsOpen(false);
 
       toast({
         title: "Success",
-        description: "Employee added successfully",
+        description: "Project added successfully",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add employee",
+        description: error instanceof Error ? error.message : "Failed to add project",
         variant: "destructive",
       });
     } finally {
@@ -78,34 +72,34 @@ export default function EmployeesPage() {
 
   return (
     <div className="container p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Employees</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Projects</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
-              <PlusIcon className="w-4 h-4 mr-2" />
-              Add Employee
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Add Project
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Employee</DialogTitle>
+              <DialogTitle>Add New Project</DialogTitle>
               <DialogDescription>
-                Add a new employee to your organization
+                Add a new project to your organization
               </DialogDescription>
             </DialogHeader>
-            <EmployeeForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} />
           </DialogContent>
         </Dialog>
       </div>
       
       <Card>
         <CardHeader>
-          <CardTitle>Employee Directory</CardTitle>
-          <CardDescription>Manage your organization's employees</CardDescription>
+          <CardTitle>Project Directory</CardTitle>
+          <CardDescription>Manage your organization's projects</CardDescription>
         </CardHeader>
         <CardContent>
-          <EmployeeTable employees={employees} isLoading={isTableLoading} />
+          <ProjectTable projects={projects} isLoading={isTableLoading} />
         </CardContent>
       </Card>
     </div>

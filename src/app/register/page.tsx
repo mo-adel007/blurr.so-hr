@@ -11,13 +11,19 @@ import { useSession } from "next-auth/react";
 import { registerSchema } from "@/lib/validators";
 import { z } from "zod";
 
+type FormErrors = {
+  [K in keyof z.infer<typeof registerSchema>]?: string[];
+} & {
+  [key: string]: string[] | undefined;
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect authenticated users
@@ -32,17 +38,38 @@ export default function RegisterPage() {
     return null;
   }
 
+  const validateForm = () => {
+    try {
+      registerSchema.parse({ name, email, password });
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors: FormErrors = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            const field = err.path[0].toString();
+            if (!formattedErrors[field]) {
+              formattedErrors[field] = [];
+            }
+            formattedErrors[field]?.push(err.message);
+          }
+        });
+        setErrors(formattedErrors);
+      }
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const validation = registerSchema.safeParse({ name, email, password });
-    if (!validation.success) {
-      setError(validation.error.errors[0].message);
-      setIsLoading(false);
+    
+    if (!validateForm()) {
       return;
     }
+
+    setIsLoading(true);
+    setErrors({});
 
     try {
       const response = await fetch("/api/register", {
@@ -60,18 +87,37 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 409) {
+          setErrors({
+            email: ["User with this email already exists"],
+          });
+          return;
+        }
         throw new Error(data.message || "Failed to register");
       }
 
       router.push("/login?registered=true");
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      setErrors({
+        email: [error instanceof Error ? error.message : "Something went wrong. Please try again."],
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === "name") setName(value);
+    if (name === "email") setEmail(value);
+    if (name === "password") setPassword(value);
+    
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
     }
   };
 
@@ -95,41 +141,48 @@ export default function RegisterPage() {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
+                name="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="John Doe"
-                required
+                className={errors.name ? "border-destructive" : ""}
               />
+              {errors.name?.map((error) => (
+                <p key={error} className="text-sm text-destructive">{error}</p>
+              ))}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="name@example.com"
-                required
+                className={errors.email ? "border-destructive" : ""}
               />
+              {errors.email?.map((error) => (
+                <p key={error} className="text-sm text-destructive">{error}</p>
+              ))}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                onChange={handleInputChange}
+                className={errors.password ? "border-destructive" : ""}
               />
+              {errors.password?.map((error) => (
+                <p key={error} className="text-sm text-destructive">{error}</p>
+              ))}
             </div>
             <Button
               type="submit"

@@ -8,9 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn as nextAuthSignIn, useSession } from "next-auth/react";
-import { loginSchema } from "@/lib/validators";
-import { z } from "zod";
-import LogoLight from "@/assets/logo-light.svg";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,12 +38,6 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
-    const validation = loginSchema.safeParse({ email, password });
-    if (!validation.success) {
-      setError(validation.error.errors[0].message);
-      setIsLoading(false);
-      return;
-    }
     try {
       const result = await nextAuthSignIn("credentials", {
         redirect: false,
@@ -73,11 +64,7 @@ export default function LoginPage() {
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <img
-          src={LogoLight}
-          alt="Loading..."
-          className="h-5 animate-pulse"
-        />
+        <p>Loading...</p>
       </div>
     );
   }
@@ -87,13 +74,12 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your email and password to access your account</CardDescription>
+          <CardDescription>
+            Enter your email and password to access your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -101,7 +87,9 @@ export default function LoginPage() {
             )}
             {registered && (
               <Alert>
-                <AlertDescription>Registration successful! You can now log in.</AlertDescription>
+                <AlertDescription>
+                  Registration successful! You can now log in.
+                </AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
@@ -125,11 +113,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
@@ -148,4 +132,4 @@ export default function LoginPage() {
       </Card>
     </div>
   );
-}
+} 
