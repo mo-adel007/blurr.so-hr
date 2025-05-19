@@ -77,7 +77,6 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
-
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -113,10 +112,79 @@
 }
 
 @layer base {
+  :root {
+    --background: 230 24% 14%;
+    --foreground: 0 0% 100%;
+    --card: 230 24% 14%;
+    --card-foreground: 0 0% 100%;
+    --popover: 230 24% 14%;
+    --popover-foreground: 0 0% 100%;
+    
+    /* Main mint green color */
+    --primary: 162 70% 49%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Dark blue and mint complementary colors */
+    --secondary: 230 24% 24%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 230 24% 24%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
+    --accent: 162 70% 49%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 230 24% 24%;
+    --input: 230 24% 24%;
+    --ring: 162 70% 49%;
+    
+    /* Chart colors */
+    --chart-1: 162 70% 49%;
+    --chart-2: 196 80% 53%;
+    --chart-3: 271 91% 65%;
+    --chart-4: 338 85% 67%;
+    --chart-5: 36 90% 62%;
+    
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Smooth transitions for theme changes */
+html {
+  color-scheme: dark;
+}
+
+html, body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Animation for interactive elements */
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Smooth page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+main {
+  animation: fadeIn 0.3s ease-in-out;
 }

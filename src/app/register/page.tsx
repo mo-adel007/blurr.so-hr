@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSession } from "next-auth/react";
+import { registerSchema } from "@/lib/validators";
+import { z } from "zod";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,6 +36,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    const validation = registerSchema.safeParse({ name, email, password });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/register", {
@@ -79,12 +88,13 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>
-            Enter your details to create a new account
-          </CardDescription>
+          <CardDescription>Enter your details to create a new account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+          >
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -121,7 +131,11 @@ export default function RegisterPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
@@ -140,4 +154,4 @@ export default function RegisterPage() {
       </Card>
     </div>
   );
-} 
+}

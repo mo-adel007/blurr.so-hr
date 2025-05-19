@@ -14,11 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
           <Navigation />
-          <main>{children}</main>
+          <main className="min-h-screen pt-16">{children}</main>
         </Providers>
       </body>
     </html>
