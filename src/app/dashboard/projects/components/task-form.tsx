@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ type FormErrors = {
 interface TaskFormProps {
   onSubmit: (data: z.infer<typeof taskSchema>) => Promise<void>;
   isLoading: boolean;
+  initialData?: any;
 }
 
 type TaskFormState = {
@@ -28,7 +29,13 @@ type TaskFormState = {
   status: "todo" | "in_progress" | "completed" | "on_hold";
 };
 
-export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
+interface Employee {
+  id: string;
+  employeeId: string;
+  name: string;
+}
+
+export function TaskForm({ onSubmit, isLoading, initialData }: TaskFormProps) {
   const [formData, setFormData] = useState<TaskFormState>({
     title: "",
     description: "",
@@ -37,6 +44,37 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
     status: "todo",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title,
+        description: initialData.description,
+        priority: initialData.priority,
+        assignedTo: initialData.assignedTo,
+        status: initialData.status,
+      });
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    async function fetchEmployees() {
+      try {
+        const response = await fetch("/api/employees");
+        if (!response.ok) throw new Error("Failed to fetch employees");
+        const data = await response.json();
+        setEmployees(data);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      } finally {
+        setIsLoadingEmployees(false);
+      }
+    }
+
+    fetchEmployees();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -46,7 +84,6 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({
         ...prev,
@@ -79,7 +116,7 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
         error.errors.forEach((err) => {
           if (err.path[0]) {
             const field = err.path[0].toString();
-            if (!formattedErrors[field]) {
+            if (!formattedErrors[field as keyof FormErrors]) {
               formattedErrors[field as keyof FormErrors] = [];
             }
             formattedErrors[field]?.push(err.message);
@@ -99,14 +136,6 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
     }
 
     await onSubmit(formData);
-    setFormData({
-      title: "",
-      description: "",
-      priority: "low",
-      assignedTo: "",
-      status: "todo",
-    });
-    setErrors({});
   };
 
   return (
@@ -163,14 +192,27 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="assignedTo">Assigned To</Label>
-        <Input
-          id="assignedTo"
-          name="assignedTo"
-          placeholder="Enter assignee name"
+        <Select
           value={formData.assignedTo}
-          onChange={handleInputChange}
-          className={errors.assignedTo ? "border-red-500" : ""}
-        />
+          onValueChange={(value) => handleSelectChange("assignedTo", value)}
+        >
+          <SelectTrigger className={errors.assignedTo ? "border-red-500" : ""}>
+            <SelectValue placeholder="Select employee" />
+          </SelectTrigger>
+          <SelectContent>
+            {isLoadingEmployees ? (
+              <SelectItem value="loading">Loading employees...</SelectItem>
+            ) : employees.length === 0 ? (
+              <SelectItem value="none">No employees available</SelectItem>
+            ) : (
+              employees.map((employee) => (
+                <SelectItem key={employee.id} value={employee.employeeId}>
+                  {employee.name} ({employee.employeeId})
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
         {errors.assignedTo?.map((error) => (
           <p key={error} className="text-sm text-red-500">{error}</p>
         ))}
@@ -198,7 +240,7 @@ export function TaskForm({ onSubmit, isLoading }: TaskFormProps) {
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Adding..." : "Add Task"}
+        {isLoading ? (initialData ? "Updating..." : "Adding...") : (initialData ? "Update Task" : "Add Task")}
       </Button>
     </form>
   );

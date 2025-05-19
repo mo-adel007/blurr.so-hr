@@ -64,9 +64,9 @@ export const taskSchema = z.object({
     required_error: "Please select a priority level",
   }),
   assignedTo: z.string()
-    .min(2, "Please enter the assignee name")
-    .max(100, "Assignee name cannot exceed 100 characters"),
+    .min(1, "Please select a user to assign the task to"),
   status: z.enum(["todo", "in_progress", "completed", "on_hold"], {
     required_error: "Please select a status",
   }),
 });
+

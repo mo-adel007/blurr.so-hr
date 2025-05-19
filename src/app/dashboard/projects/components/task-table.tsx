@@ -4,9 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardListIcon, SearchIcon } from "lucide-react";
+import { ClipboardListIcon, SearchIcon, PencilIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Task {
@@ -21,6 +22,7 @@ interface Task {
 interface TaskTableProps {
   tasks: Task[];
   isLoading: boolean;
+  onEdit: (task: Task) => void;
 }
 
 const priorityColors = {
@@ -36,15 +38,35 @@ const statusColors = {
   on_hold: "bg-yellow-100 text-yellow-800",
 };
 
-export function TaskTable({ tasks, isLoading }: TaskTableProps) {
+export function TaskTable({ tasks, isLoading, onEdit }: TaskTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [employees, setEmployees] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchEmployees() {
+      try {
+        const response = await fetch("/api/employees");
+        if (!response.ok) throw new Error("Failed to fetch employees");
+        const data = await response.json();
+        const employeeMap = data.reduce((acc: Record<string, string>, emp: any) => {
+          acc[emp.employeeId] = emp.name;
+          return acc;
+        }, {});
+        setEmployees(employeeMap);
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+      }
+    }
+
+    fetchEmployees();
+  }, []);
 
   const filteredTasks = tasks.filter(
     (task) =>
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())
+      (employees[task.assignedTo] || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
@@ -143,6 +165,7 @@ export function TaskTable({ tasks, isLoading }: TaskTableProps) {
             <TableHead>Priority</TableHead>
             <TableHead>Assigned To</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -155,11 +178,21 @@ export function TaskTable({ tasks, isLoading }: TaskTableProps) {
                   {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                 </Badge>
               </TableCell>
-              <TableCell>{task.assignedTo}</TableCell>
+              <TableCell>{employees[task.assignedTo] || task.assignedTo}</TableCell>
               <TableCell>
                 <Badge className={statusColors[task.status as keyof typeof statusColors]}>
                   {task.status.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(task)}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  <span className="sr-only">Edit task</span>
+                </Button>
               </TableCell>
             </TableRow>
           ))}

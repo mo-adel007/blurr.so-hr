@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import { TaskForm } from "../components/task-form";
 import { TaskTable } from "../components/task-table";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KanbanBoard } from "../components/kanban-board";
 
 export default function ProjectTasksPage() {
   const params = useParams();
@@ -19,6 +20,7 @@ export default function ProjectTasksPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTableLoading, setIsTableLoading] = useState(true);
+  const [editingTask, setEditingTask] = useState<any>(null);
   const { toast } = useToast();
 
   const fetchTasks = async () => {
@@ -67,8 +69,14 @@ export default function ProjectTasksPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/projects/${params.projectId}/tasks`, {
-        method: "POST",
+      const url = editingTask 
+        ? `/api/projects/${params.projectId}/tasks/${editingTask.id}`
+        : `/api/projects/${params.projectId}/tasks`;
+      
+      const method = editingTask ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -77,24 +85,59 @@ export default function ProjectTasksPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add task");
+        throw new Error(errorData.message || `Failed to ${editingTask ? 'update' : 'add'} task`);
       }
 
       await fetchTasks();
       setIsOpen(false);
+      setEditingTask(null);
 
       toast({
         title: "Success",
-        description: "Task added successfully",
+        description: `Task ${editingTask ? 'updated' : 'added'} successfully`,
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add task",
+        description: error instanceof Error ? error.message : `Failed to ${editingTask ? 'update' : 'add'} task`,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (task: any) => {
+    setEditingTask(task);
+    setIsOpen(true);
+  };
+
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      const task = tasks.find((t: any) => t.id === taskId);
+      if (!task) return;
+
+      const response = await fetch(`/api/projects/${params.projectId}/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...task, status: newStatus }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update task status");
+
+      await fetchTasks();
+      
+      toast({
+        description: "Task status updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update task status",
+        variant: "destructive",
+      });
     }
   };
 
@@ -116,7 +159,13 @@ export default function ProjectTasksPage() {
           </Button>
           <h1 className="text-3xl font-bold">{project.title}</h1>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog 
+          open={isOpen} 
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) setEditingTask(null);
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <PlusIcon className="mr-2 h-4 w-4" />
@@ -125,12 +174,16 @@ export default function ProjectTasksPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Task</DialogTitle>
+              <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
               <DialogDescription>
-                Add a new task to {project.title}
+                {editingTask ? 'Edit task details' : `Add a new task to ${project.title}`}
               </DialogDescription>
             </DialogHeader>
-            <TaskForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <TaskForm 
+              onSubmit={handleSubmit} 
+              isLoading={isLoading}
+              initialData={editingTask}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -141,7 +194,27 @@ export default function ProjectTasksPage() {
           <CardDescription>{project.description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <TaskTable tasks={tasks} isLoading={isTableLoading} />
+          <Tabs defaultValue="kanban">
+            <TabsList>
+              <TabsTrigger value="kanban">Kanban Board</TabsTrigger>
+              <TabsTrigger value="list">List View</TabsTrigger>
+            </TabsList>
+            <TabsContent value="kanban" className="mt-4">
+              <KanbanBoard 
+                tasks={tasks}
+                onEdit={handleEdit}
+                onStatusChange={handleStatusChange}
+                isLoading={isTableLoading}
+              />
+            </TabsContent>
+            <TabsContent value="list" className="mt-4">
+              <TaskTable 
+                tasks={tasks} 
+                isLoading={isTableLoading}
+                onEdit={handleEdit}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
