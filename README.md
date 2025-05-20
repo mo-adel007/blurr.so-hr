@@ -1,6 +1,6 @@
 # Blurr.so Technical Assessment
 
-This repository contains a full-stack Next.js application built as a technical assessment for Blurr.so.
+This repository contains a full-stack Next.js application built as a technical assessment for Blurr.so, inside of the AI you can find all the prompts
 
 ## Tech Stack
 
